@@ -74,8 +74,8 @@ const WardrobeSchematic: React.FC<Props> = ({
   const SHELF_THICKNESS = 10;
   
   // Architectural Dimension settings
-  const DIM_OFFSET = 25; // Distance of dimension line from left edge of column
-  const DIM_TICK_SIZE = 6;
+  const DIM_OFFSET = 35; // Distance of dimension line from left edge of column
+  const DIM_TICK_SIZE = 8;
 
   const { layout } = design;
   
@@ -89,18 +89,25 @@ const WardrobeSchematic: React.FC<Props> = ({
   // Calculate Real Dimensions helper
   const getRealDim = (virtualSize: number, isWidth: boolean) => {
     const ratio = isWidth ? dimensions.width / VIRTUAL_WIDTH : dimensions.height / VIRTUAL_HEIGHT;
-    const val = Math.round(virtualSize * ratio);
-    
-    // If feet, maybe format nicely, but for now raw number is cleaner for arch drawings
-    if (dimensions.unit === 'ft') {
-        // Optional: formatting for feet and inches could go here, keeping simple for now
-        return Math.round(val * 100) / 100;
-    }
+    const val = virtualSize * ratio;
+    // Keep precision for calculations, formatting happens in formatDim
     return val;
   };
   
   const formatDim = (val: number) => {
-      return `${val}${dimensions.unit === 'mm' ? '' : '"'}`;
+      if (dimensions.unit === 'ft') {
+          // Convert decimal feet to feet and inches
+          const feet = Math.floor(val);
+          const inches = Math.round((val - feet) * 12);
+          
+          // Handle rounding roll-over (e.g. 5.99 ft -> 5' 12" -> 6' 0")
+          if (inches === 12) {
+              return `${feet + 1}' 0"`;
+          }
+          return `${feet}' ${inches}"`;
+      }
+      // Default for MM
+      return `${Math.round(val)}`;
   };
 
   // Get insertion index based on mouse Y
@@ -272,8 +279,8 @@ const WardrobeSchematic: React.FC<Props> = ({
                   top: rect.top - containerRect.top,
                   left: rect.left - containerRect.left
               },
-              initialWidth: getRealDim(w, true),
-              initialHeight: getRealDim(h, false),
+              initialWidth: Math.round(getRealDim(w, true)),
+              initialHeight: Math.round(getRealDim(h, false)),
               currentType: type
           });
       }
@@ -293,6 +300,12 @@ const WardrobeSchematic: React.FC<Props> = ({
 
     let content = null;
 
+    // Styles for "Wood" look
+    const WOOD_STROKE = "#A89F91"; 
+    const WOOD_FILL = "#F0EAD6"; // Eggshell/Light Oak
+    const DRAWER_FACE = "#E6DCC3"; 
+    const METALLIC = "#cbd5e1";
+
     // Selection Highlight
     const selectionHighlight = isEditing ? (
        <rect
@@ -300,11 +313,11 @@ const WardrobeSchematic: React.FC<Props> = ({
           y={y + 2}
           width={Math.max(0, w - 4)}
           height={Math.max(0, h - 4)}
-          fill="rgba(99, 102, 241, 0.15)"
-          stroke="#6366f1"
+          fill="rgba(251, 191, 36, 0.1)" // Amber tint
+          stroke="#d97706" // Amber-600
           strokeWidth="2"
           strokeDasharray="6 4"
-          rx="4"
+          rx="2"
           pointerEvents="none"
           data-ignore-export="true"
        />
@@ -314,8 +327,20 @@ const WardrobeSchematic: React.FC<Props> = ({
       case SectionType.DRAWER:
         content = (
           <g>
-            <rect x={x + 4} y={y + 4} width={w - 8} height={h - 8} rx={4} fill={isEditing ? "#e0e7ff" : "#f1f5f9"} stroke={isEditing ? "#6366f1" : "#cbd5e1"} strokeWidth={isEditing ? 3 : 2} />
-            <rect x={centerX - 40} y={centerY - 5} width={80} height={10} rx={5} fill={isEditing ? "#818cf8" : "#94a3b8"} />
+            {/* Drawer Face */}
+            <rect 
+              x={x + 3} y={y + 3} width={w - 6} height={h - 6} 
+              fill={DRAWER_FACE} 
+              stroke={WOOD_STROKE} 
+              strokeWidth="1.5" 
+            />
+            {/* Handle */}
+            <rect 
+              x={centerX - 30} y={centerY - 4} width={60} height={8} 
+              rx={2} 
+              fill="#94a3b8" // darker handle
+              filter="drop-shadow(0px 1px 1px rgba(0,0,0,0.1))"
+            />
           </g>
         );
         break;
@@ -323,37 +348,60 @@ const WardrobeSchematic: React.FC<Props> = ({
       case SectionType.LONG_SHELF:
       case SectionType.SHOE_RACK:
         const opacity = isHidden ? 0 : 1;
+        // Realistic shelf thickness
         content = (
           <g opacity={opacity}>
-             <line x1={x} y1={y + h - SHELF_THICKNESS} x2={x + w} y2={y + h - SHELF_THICKNESS} stroke={isEditing ? "#6366f1" : "#e2e8f0"} strokeWidth={SHELF_THICKNESS} />
-             {h > 50 && <rect x={centerX - w * 0.25} y={y + h - 40} width={w * 0.5} height={20} rx={4} fill={isEditing ? "#c7d2fe" : "#bfdbfe"} opacity="0.5" />}
+             <rect 
+                x={x} y={y + h - SHELF_THICKNESS} 
+                width={w} height={SHELF_THICKNESS} 
+                fill="#D4C4A8" // Darker wood edge
+                stroke="none"
+             />
+             {/* Suggestion of depth/folded clothes */}
+             {h > 50 && type !== SectionType.SHOE_RACK && (
+               <path 
+                 d={`M${centerX - w * 0.2} ${y + h - SHELF_THICKNESS} L${centerX + w * 0.2} ${y + h - SHELF_THICKNESS} L${centerX + w * 0.22} ${y + h - 30} L${centerX - w * 0.22} ${y + h - 30} Z`}
+                 fill="#f1f5f9"
+                 stroke="#e2e8f0"
+               />
+             )}
+             {/* Shoe Rack Angles */}
+             {type === SectionType.SHOE_RACK && (
+                <line x1={x} y1={y + h - 20} x2={x + w} y2={y + h - 5} stroke="#cbd5e1" strokeWidth="2" />
+             )}
           </g>
         );
         break;
       case SectionType.HANGING_ROD:
         content = (
           <g>
-            <line x1={x + 5} y1={y + 50} x2={x + w - 5} y2={y + 50} stroke={isEditing ? "#818cf8" : "#cbd5e1"} strokeWidth="8" strokeLinecap="round" />
-            <path d={`M${centerX} ${y+50} L${centerX - 25} ${y+85} L${centerX + 25} ${y+85} Z`} fill="none" stroke={isEditing ? "#818cf8" : "#94a3b8"} strokeWidth="3" />
-            <path d={`M${centerX - 25} ${y+85} Q${centerX - 35} ${y+h-20} ${centerX} ${y+h-20} Q${centerX + 35} ${y+h-20} ${centerX + 25} ${y+85}`} fill="#f0f9ff" stroke={isEditing ? "#c7d2fe" : "#e0f2fe"} strokeWidth="3" />
+            {/* Rod */}
+            <line x1={x + 2} y1={y + 50} x2={x + w - 2} y2={y + 50} stroke="#94a3b8" strokeWidth="6" strokeLinecap="round" />
+            
+            {/* Hanger simplified */}
+            <path d={`M${centerX} ${y+50} L${centerX - 20} ${y+80} L${centerX + 20} ${y+80} Z`} fill="none" stroke="#94a3b8" strokeWidth="2" />
+            {/* Clothes shape */}
+            <path 
+                d={`M${centerX - 20} ${y+80} Q${centerX - 30} ${y+h-10} ${centerX} ${y+h-10} Q${centerX + 30} ${y+h-10} ${centerX + 20} ${y+80}`} 
+                fill="#e2e8f0" 
+                stroke="#cbd5e1" 
+                strokeWidth="1" 
+                opacity="0.6"
+            />
           </g>
         );
         break;
       case SectionType.EMPTY:
         content = (
           <g>
-             {/* Dashed border and distinctive background for empty space */}
-            <rect 
-              x={x + 4} 
-              y={y + 4} 
-              width={w - 8} 
-              height={h - 8} 
-              rx={4} 
+             {/* Subtle hatching for void */}
+             <rect 
+              x={x} 
+              y={y} 
+              width={w} 
+              height={h} 
               fill="url(#diagonalHatch)"
-              stroke={isEditing ? "#64748b" : "#94a3b8"} 
-              strokeWidth="2" 
-              strokeDasharray="8 4"
-              opacity="0.6"
+              opacity="0.3"
             />
           </g>
         );
@@ -362,7 +410,6 @@ const WardrobeSchematic: React.FC<Props> = ({
         content = null;
     }
 
-    const TYPE_FONT_SIZE = 32;
     const deleteBtnY = h < 50 ? y + h/2 : y + 30;
     const dimX = x + DIM_OFFSET;
 
@@ -374,7 +421,8 @@ const WardrobeSchematic: React.FC<Props> = ({
         onClick={(e) => handleItemClick(e, colIdx, itemIdx, type, w, h)}
         style={{ cursor: 'grab' }}
       >
-        <rect x={x} y={y} width={w} height={h} fill="transparent" className="hover:fill-indigo-50/30 transition-colors" />
+        {/* Transparent Hit Area */}
+        <rect x={x} y={y} width={w} height={h} fill="transparent" className="hover:fill-amber-50/30 transition-colors" />
         
         {selectionHighlight}
 
@@ -387,55 +435,38 @@ const WardrobeSchematic: React.FC<Props> = ({
                 <line 
                     x1={dimX} y1={y} 
                     x2={dimX} y2={y + h} 
-                    stroke="#64748b" strokeWidth="1" 
+                    stroke="#44403c" strokeWidth="0.7" 
                 />
                 
                 {/* Top Tick */}
                 <line 
-                    x1={dimX - DIM_TICK_SIZE} y1={y} 
-                    x2={dimX + DIM_TICK_SIZE} y2={y} 
-                    stroke="#64748b" strokeWidth="1" 
+                    x1={dimX - DIM_TICK_SIZE} y1={y + DIM_TICK_SIZE} 
+                    x2={dimX + DIM_TICK_SIZE} y2={y - DIM_TICK_SIZE} 
+                    stroke="#44403c" strokeWidth="0.7" 
                 />
 
-                {/* Bottom Tick (only if not last item, or strictly draw both to be safe) */}
+                {/* Bottom Tick */}
                 <line 
-                    x1={dimX - DIM_TICK_SIZE} y1={y + h} 
-                    x2={dimX + DIM_TICK_SIZE} y2={y + h} 
-                    stroke="#64748b" strokeWidth="1" 
+                    x1={dimX - DIM_TICK_SIZE} y1={y + h + DIM_TICK_SIZE} 
+                    x2={dimX + DIM_TICK_SIZE} y2={y + h - DIM_TICK_SIZE} 
+                    stroke="#44403c" strokeWidth="0.7" 
                 />
                 
                 {/* Dimension Text - Rotated */}
                 <text 
-                    x={dimX + 12} 
+                    x={dimX + 14} 
                     y={y + h/2} 
                     textAnchor="middle" 
                     dominantBaseline="middle"
-                    fill="#475569" 
-                    fontSize="20"
+                    fill="#1c1917" 
+                    fontSize="18"
                     fontFamily="monospace"
-                    fontWeight="bold"
-                    transform={`rotate(-90, ${dimX + 12}, ${y + h/2})`}
-                    style={{ textShadow: '0px 0px 4px white' }}
+                    transform={`rotate(-90, ${dimX + 14}, ${y + h/2})`}
+                    style={{ textShadow: '0px 0px 4px white', letterSpacing: '-0.05em' }}
                 >
                     {formatDim(realH)}
                 </text>
             </g>
-        )}
-        
-        {!isHidden && (w > 120 && h > 100) && (
-            <text 
-                x={centerX} 
-                y={centerY} 
-                textAnchor="middle" 
-                dominantBaseline="middle"
-                fill={type === SectionType.EMPTY ? "#64748b" : "#64748b"} 
-                fontSize={TYPE_FONT_SIZE} 
-                opacity={type === SectionType.EMPTY ? "0.8" : "0.15"}
-                className="pointer-events-none select-none uppercase font-bold tracking-wider"
-                style={type === SectionType.EMPTY ? {textShadow: '0px 0px 5px white'} : {}}
-            >
-                {type.split(' ')[0]}
-            </text>
         )}
 
         {!isDraggingSource && (
@@ -452,16 +483,10 @@ const WardrobeSchematic: React.FC<Props> = ({
                       }}
                       onMouseDown={(e) => e.stopPropagation()}
                   >
-                      <circle r="20" fill="#fee2e2" stroke="#ef4444" strokeWidth="2" />
-                      <line x1="-8" y1="-8" x2="8" y2="8" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
-                      <line x1="8" y1="-8" x2="-8" y2="8" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
+                      <circle r="16" fill="#fff1f2" stroke="#be123c" strokeWidth="1.5" />
+                      <line x1="-6" y1="-6" x2="6" y2="6" stroke="#be123c" strokeWidth="2" strokeLinecap="round" />
+                      <line x1="6" y1="-6" x2="-6" y2="6" stroke="#be123c" strokeWidth="2" strokeLinecap="round" />
                   </g>
-              )}
-              {onUpdateItem && (
-                <g transform={`translate(${x + 25}, ${deleteBtnY})`} className="pointer-events-none">
-                    <circle r="16" fill="#f1f5f9" opacity="0.8" />
-                    <text textAnchor="middle" dy="5" fontSize="20" className="fill-slate-500">✎</text>
-                </g>
               )}
           </g>
         )}
@@ -484,21 +509,21 @@ const WardrobeSchematic: React.FC<Props> = ({
 
       return (
           <div 
-            className="absolute z-50 bg-white rounded-xl shadow-2xl border border-indigo-100 p-4 w-64 animate-in zoom-in-95 duration-200 ring-4 ring-indigo-500/10"
+            className="absolute z-50 bg-stone-900 rounded-lg shadow-2xl border border-stone-700 p-4 w-64 animate-in zoom-in-95 duration-200"
             style={style}
             onClick={(e) => e.stopPropagation()}
           >
-              <div className="flex justify-between items-center mb-3">
-                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                      <Edit2 size={12} className="text-indigo-600"/> {isTopShelf ? 'Edit Top Shelf' : 'Edit Item'}
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-stone-800">
+                  <h4 className="font-bold text-stone-200 text-xs uppercase tracking-widest flex items-center gap-2">
+                      <Edit2 size={10} className="text-amber-500"/> {isTopShelf ? 'Top Shelf' : 'Edit Component'}
                   </h4>
-                  <button onClick={() => setEditingItem(null)} className="text-slate-400 hover:text-slate-600">
-                      <X size={16} />
+                  <button onClick={() => setEditingItem(null)} className="text-stone-500 hover:text-stone-300">
+                      <X size={14} />
                   </button>
               </div>
 
-              <div className="mb-3">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Item Type</label>
+              <div className="mb-4">
+                  <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">Type</label>
                   <select 
                       value={currentType}
                       disabled={isTopShelf}
@@ -506,7 +531,7 @@ const WardrobeSchematic: React.FC<Props> = ({
                           onUpdateItem(colIdx, itemIdx, { type: e.target.value as SectionType });
                           setEditingItem(prev => prev ? { ...prev, currentType: e.target.value as SectionType } : null);
                       }}
-                      className={`w-full text-sm p-2 rounded-lg border border-slate-200 bg-slate-50 focus:border-indigo-500 outline-none transition-all ${isTopShelf ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`w-full text-sm p-2 rounded bg-stone-800 border border-stone-700 text-stone-200 focus:border-amber-500 outline-none ${isTopShelf ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                       {Object.entries(ITEM_CONFIGS).map(([type, config]) => (
                           <option key={type} value={type}>{config.label}</option>
@@ -516,34 +541,25 @@ const WardrobeSchematic: React.FC<Props> = ({
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                   <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">W ({dimensions.unit})</label>
+                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">W ({dimensions.unit})</label>
                       <input 
                         type="number" 
                         defaultValue={initialWidth}
                         disabled={isTopShelf}
-                        title={isTopShelf ? "Top shelf width is fixed to wardrobe width" : ""}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                const val = Number(e.currentTarget.value);
-                                if (val > 0) {
-                                    onUpdateItem(colIdx, itemIdx, { width: val });
-                                    setEditingItem(null); 
-                                }
-                            }
-                        }}
+                        className={`w-full text-sm p-2 rounded bg-stone-800 border border-stone-700 text-stone-200 font-mono ${isTopShelf ? 'opacity-50 cursor-not-allowed' : ''}`}
                         onBlur={(e) => {
                             const val = Number(e.target.value);
                             if (val > 0 && val !== initialWidth) onUpdateItem(colIdx, itemIdx, { width: val });
                         }}
-                        className={`w-full text-sm p-2 rounded-lg border border-slate-200 bg-slate-50 focus:border-indigo-500 outline-none font-mono font-medium ${isTopShelf ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
                   </div>
                   <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">H ({dimensions.unit})</label>
+                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">H ({dimensions.unit})</label>
                       <input 
                         type="number" 
                         defaultValue={initialHeight}
                         autoFocus
+                        className="w-full text-sm p-2 rounded bg-stone-800 border border-stone-700 text-stone-200 font-mono"
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 const val = Number(e.currentTarget.value);
@@ -557,26 +573,25 @@ const WardrobeSchematic: React.FC<Props> = ({
                             const val = Number(e.target.value);
                             if (val >= 0 && val !== initialHeight) onUpdateItem(colIdx, itemIdx, { height: val });
                         }}
-                        className="w-full text-sm p-2 rounded-lg border border-slate-200 bg-slate-50 focus:border-indigo-500 outline-none font-mono font-medium"
                       />
                   </div>
               </div>
               
-              <div className="flex gap-2 pt-3 border-t border-slate-50">
+              <div className="flex gap-2 pt-3">
                    <button 
                       onClick={() => {
                           if (onDeleteItem) onDeleteItem(colIdx, itemIdx);
                           setEditingItem(null);
                       }}
-                      className="flex-1 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-md flex items-center justify-center gap-1 transition-colors"
+                      className="flex-1 py-1.5 text-xs font-medium text-red-400 hover:bg-red-400/10 rounded flex items-center justify-center gap-1 transition-colors"
                    >
-                      <Trash2 size={14} /> Remove
+                      <Trash2 size={12} /> Remove
                    </button>
                    <button 
                       onClick={() => setEditingItem(null)}
-                      className="flex-1 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-md flex items-center justify-center gap-1 transition-colors"
+                      className="flex-1 py-1.5 text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 rounded flex items-center justify-center gap-1 transition-colors"
                    >
-                      <Check size={14} /> Done
+                      <Check size={12} /> Done
                    </button>
               </div>
           </div>
@@ -586,7 +601,7 @@ const WardrobeSchematic: React.FC<Props> = ({
   return (
     <div 
       ref={containerRef} 
-      className={`w-full h-full bg-white rounded-lg overflow-hidden border-2 border-slate-100 relative select-none ${resizing ? (resizing.type === 'col' ? 'cursor-ew-resize' : 'cursor-ns-resize') : 'cursor-default'}`}
+      className={`w-full h-full bg-white rounded-sm border border-stone-200 relative select-none ${resizing ? (resizing.type === 'col' ? 'cursor-ew-resize' : 'cursor-ns-resize') : 'cursor-default'}`}
     >
       
       <EditPopover />
@@ -595,7 +610,7 @@ const WardrobeSchematic: React.FC<Props> = ({
         id={svgId || "wardrobe-schematic-svg"}
         ref={svgRef}
         viewBox={`0 0 ${VIRTUAL_WIDTH} ${VIRTUAL_HEIGHT}`} 
-        className="w-full h-full"
+        className="w-full h-full bg-grid-pattern"
         preserveAspectRatio="xMidYMid meet"
         onClick={() => setEditingItem(null)} 
         onDragOver={(e) => e.preventDefault()}
@@ -604,7 +619,7 @@ const WardrobeSchematic: React.FC<Props> = ({
       >
         <defs>
             <pattern id="diagonalHatch" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-                <line x1="0" y1="0" x2="0" y2="10" style={{stroke:'#e2e8f0', strokeWidth:2}} />
+                <line x1="0" y1="0" x2="0" y2="10" style={{stroke:'#e7e5e4', strokeWidth:1}} />
             </pattern>
         </defs>
 
@@ -613,8 +628,8 @@ const WardrobeSchematic: React.FC<Props> = ({
             y={FRAME_THICKNESS/2} 
             width={VIRTUAL_WIDTH - FRAME_THICKNESS} 
             height={VIRTUAL_HEIGHT - FRAME_THICKNESS} 
-            fill="#fff" 
-            stroke="#334155" 
+            fill="#fdf6e3" 
+            stroke="#44403c" 
             strokeWidth={FRAME_THICKNESS} 
         />
 
@@ -635,7 +650,7 @@ const WardrobeSchematic: React.FC<Props> = ({
                                 left: rect.left - containerRect.left
                             },
                             initialWidth: dimensions.width, 
-                            initialHeight: getRealDim(topShelfHeight, false),
+                            initialHeight: Math.round(getRealDim(topShelfHeight, false)),
                             currentType: SectionType.LONG_SHELF
                         });
                     }
@@ -650,8 +665,8 @@ const WardrobeSchematic: React.FC<Props> = ({
                 y={FRAME_THICKNESS} 
                 width={VIRTUAL_WIDTH - FRAME_THICKNESS*2} 
                 height={topShelfHeight} 
-                fill={editingItem?.colIdx === -1 ? "rgba(99, 102, 241, 0.1)" : "none"} 
-                stroke={editingItem?.colIdx === -1 ? "#6366f1" : "none"} 
+                fill={editingItem?.colIdx === -1 ? "rgba(251, 191, 36, 0.1)" : "none"} 
+                stroke={editingItem?.colIdx === -1 ? "#d97706" : "none"} 
                 strokeWidth={editingItem?.colIdx === -1 ? "3" : "0"}
                 strokeDasharray={editingItem?.colIdx === -1 ? "6 4" : "none"}
                 data-ignore-export="true"
@@ -662,7 +677,7 @@ const WardrobeSchematic: React.FC<Props> = ({
                 y1={topShelfHeight + FRAME_THICKNESS/2} 
                 x2={VIRTUAL_WIDTH - FRAME_THICKNESS} 
                 y2={topShelfHeight + FRAME_THICKNESS/2} 
-                stroke="#334155" 
+                stroke="#44403c" 
                 strokeWidth={SHELF_THICKNESS} 
              />
              
@@ -671,18 +686,11 @@ const WardrobeSchematic: React.FC<Props> = ({
                x={VIRTUAL_WIDTH/2} 
                y={topShelfHeight/2 + 15} 
                textAnchor="middle" 
-               className="fill-slate-400 font-mono font-bold tracking-wider transition-colors" 
-               fontSize="30"
+               className="fill-stone-400 font-mono font-bold tracking-widest uppercase" 
+               fontSize="24"
              >
-               Top Shelf ({formatDim(getRealDim(topShelfHeight, false))} H)
+               Upper Storage ({formatDim(getRealDim(topShelfHeight, false))} H)
              </text>
-
-             {onUpdateItem && (
-                 <g className="opacity-0 group-hover:opacity-100 transition-opacity" transform={`translate(${VIRTUAL_WIDTH/2}, ${topShelfHeight/2 + 50})`} data-ignore-export="true">
-                     <circle r="12" fill="#f1f5f9" opacity="0.9"/>
-                     <text textAnchor="middle" dy="4" fontSize="14" fill="#64748b">✎</text>
-                 </g>
-             )}
           </g>
         )}
 
@@ -713,26 +721,28 @@ const WardrobeSchematic: React.FC<Props> = ({
                     y={columnsStartY} 
                     width={colWidth} 
                     height={columnsAvailableHeight} 
-                    fill={isDropTarget ? "rgba(99, 102, 241, 0.08)" : "transparent"}
+                    fill={isDropTarget ? "rgba(251, 191, 36, 0.1)" : "transparent"}
                     className="transition-colors duration-200"
                 />
 
                 {/* Horizontal Width Dimension for Column (Architectural Style) */}
                 <g className="pointer-events-none">
                     <line 
-                        x1={currentX} y1={columnsStartY + 20} 
-                        x2={currentX + colWidth} y2={columnsStartY + 20} 
-                        stroke="#64748b" strokeWidth="1" 
+                        x1={currentX} y1={columnsStartY + 25} 
+                        x2={currentX + colWidth} y2={columnsStartY + 25} 
+                        stroke="#44403c" strokeWidth="0.7" 
                     />
-                    <line x1={currentX} y1={columnsStartY + 15} x2={currentX} y2={columnsStartY + 25} stroke="#64748b" strokeWidth="1" />
-                    <line x1={currentX + colWidth} y1={columnsStartY + 15} x2={currentX + colWidth} y2={columnsStartY + 25} stroke="#64748b" strokeWidth="1" />
-                    <rect x={currentX + colWidth/2 - 25} y={columnsStartY + 8} width="50" height="24" fill="white" fillOpacity="0.8" />
+                    {/* Ticks */}
+                    <line x1={currentX} y1={columnsStartY + 20} x2={currentX + 5} y2={columnsStartY + 30} stroke="#44403c" strokeWidth="0.7" />
+                    <line x1={currentX + colWidth - 5} y1={columnsStartY + 20} x2={currentX + colWidth} y2={columnsStartY + 30} stroke="#44403c" strokeWidth="0.7" />
+                    
+                    <rect x={currentX + colWidth/2 - 30} y={columnsStartY + 12} width="60" height="26" fill="#fdf6e3" rx="2" />
                     <text 
                         x={currentX + colWidth/2} 
-                        y={columnsStartY + 25} 
+                        y={columnsStartY + 30} 
                         textAnchor="middle" 
-                        fill="#475569" 
-                        fontSize="20" 
+                        fill="#1c1917" 
+                        fontSize="18" 
                         fontFamily="monospace"
                         fontWeight="bold"
                     >
@@ -767,7 +777,7 @@ const WardrobeSchematic: React.FC<Props> = ({
                             y1={itemDividerY} 
                             x2={currentX + colWidth} 
                             y2={itemDividerY} 
-                            stroke="#cbd5e1" 
+                            stroke="#d6d3d1" 
                             strokeWidth={SHELF_THICKNESS} 
                        />
                      ) : null;
@@ -791,15 +801,15 @@ const WardrobeSchematic: React.FC<Props> = ({
                             y={itemDividerY - 30} 
                             width={colWidth} 
                             height={60} 
-                            fill={isResizingThisItem ? "rgba(99, 102, 241, 0.05)" : "transparent"} 
+                            fill={isResizingThisItem ? "rgba(251, 191, 36, 0.05)" : "transparent"} 
                            />
                            <line 
                             x1={currentX + 10} 
                             y1={itemDividerY} 
                             x2={currentX + colWidth - 10} 
                             y2={itemDividerY} 
-                            stroke="#6366f1" 
-                            strokeWidth="8"
+                            stroke="#d97706" 
+                            strokeWidth="4"
                             className={`transition-opacity duration-150 ${isResizingThisItem ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                            />
                        </g>
@@ -817,6 +827,7 @@ const WardrobeSchematic: React.FC<Props> = ({
                    });
                  })()}
 
+                {/* Drop Indicator */}
                 {isDropTarget && (
                     <g pointerEvents="none">
                         <line 
@@ -824,27 +835,29 @@ const WardrobeSchematic: React.FC<Props> = ({
                             y1={dropLineY} 
                             x2={currentX + colWidth - 4} 
                             y2={dropLineY} 
-                            stroke="#4f46e5" 
-                            strokeWidth="6" 
+                            stroke="#d97706" 
+                            strokeWidth="4" 
                             strokeDasharray="8 4" 
                             strokeLinecap="round"
                         />
-                        <circle cx={currentX} cy={dropLineY} r="6" fill="#4f46e5" />
-                        <circle cx={currentX + colWidth} cy={dropLineY} r="6" fill="#4f46e5" />
+                        <circle cx={currentX} cy={dropLineY} r="4" fill="#d97706" />
+                        <circle cx={currentX + colWidth} cy={dropLineY} r="4" fill="#d97706" />
                     </g>
                 )}
 
+                {/* Vertical Divider */}
                 {colIdx < layout.columns.length - 1 && (
                     <line 
                         x1={currentX + colWidth} 
                         y1={columnsStartY} 
                         x2={currentX + colWidth} 
                         y2={VIRTUAL_HEIGHT - FRAME_THICKNESS} 
-                        stroke="#334155" 
+                        stroke="#44403c" 
                         strokeWidth={SHELF_THICKNESS} 
                     />
                 )}
 
+                {/* Column Resize Handle */}
                 {colIdx < layout.columns.length - 1 && (
                     <g 
                         className="cursor-ew-resize group"
@@ -867,15 +880,15 @@ const WardrobeSchematic: React.FC<Props> = ({
                                         y={columnsStartY} 
                                         width={60} 
                                         height={columnsAvailableHeight} 
-                                        fill={isResizingThisCol ? "rgba(99, 102, 241, 0.1)" : "transparent"}
+                                        fill={isResizingThisCol ? "rgba(251, 191, 36, 0.1)" : "transparent"}
                                     />
                                     <line 
                                         x1={currentX + colWidth} 
                                         y1={columnsStartY + 20} 
                                         x2={currentX + colWidth} 
                                         y2={VIRTUAL_HEIGHT - FRAME_THICKNESS - 20} 
-                                        stroke="#6366f1" 
-                                        strokeWidth="8" 
+                                        stroke="#d97706" 
+                                        strokeWidth="4" 
                                         className={`transition-opacity duration-150 ${isResizingThisCol ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                                     />
                                 </>
@@ -884,6 +897,7 @@ const WardrobeSchematic: React.FC<Props> = ({
                     </g>
                 )}
                 
+                {/* Eye Icon for Shelves */}
                 {hasShelves && onUpdateItem && !isDropTarget && (
                     <g 
                         className={`cursor-pointer transition-opacity duration-200 ${shelvesHidden ? 'opacity-100' : 'opacity-0 group-hover/column:opacity-100'}`}
@@ -895,11 +909,11 @@ const WardrobeSchematic: React.FC<Props> = ({
                         transform={`translate(${currentX + colWidth/2}, ${columnsStartY + 50})`}
                         data-ignore-export="true"
                     >
-                        <circle r="16" fill="white" stroke="#cbd5e1" strokeWidth="1" className="hover:stroke-indigo-400 shadow-sm" />
+                        <circle r="14" fill="white" stroke="#d6d3d1" strokeWidth="1" className="hover:stroke-amber-500 shadow-sm" />
                         {shelvesHidden ? (
-                            <EyeOff size={16} className="text-slate-400" x="-8" y="-8" />
+                            <EyeOff size={14} className="text-stone-400" x="-7" y="-7" />
                         ) : (
-                            <Eye size={16} className="text-slate-400" x="-8" y="-8" />
+                            <Eye size={14} className="text-stone-400" x="-7" y="-7" />
                         )}
                     </g>
                 )}
@@ -913,10 +927,6 @@ const WardrobeSchematic: React.FC<Props> = ({
         })()}
 
       </svg>
-      
-      <div className="absolute bottom-0 right-0 bg-slate-800/90 text-white text-xs px-3 py-1.5 rounded-tl-lg pointer-events-none font-mono z-10" data-ignore-export="true">
-        Total: {dimensions.width}{dimensions.unit} x {dimensions.height}{dimensions.unit}
-      </div>
     </div>
   );
 };

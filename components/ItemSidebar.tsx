@@ -1,14 +1,15 @@
+
 import React from 'react';
 import { Layers, Box, GripHorizontal, Footprints, Move } from 'lucide-react';
 import { SectionType } from '../types';
 
 export const ITEM_CONFIGS: Record<SectionType, { icon: any, defaultHeight: number, label: string }> = {
   [SectionType.SHELF]: { icon: Layers, defaultHeight: 10, label: 'Shelf' },
-  [SectionType.DRAWER]: { icon: Box, defaultHeight: 15, label: 'Drawer' },
-  [SectionType.HANGING_ROD]: { icon: GripHorizontal, defaultHeight: 40, label: 'Hanging Rod' },
+  [SectionType.DRAWER]: { icon: Box, defaultHeight: 15, label: 'Drawer Unit' },
+  [SectionType.HANGING_ROD]: { icon: GripHorizontal, defaultHeight: 40, label: 'Hanging Rail' },
   [SectionType.SHOE_RACK]: { icon: Footprints, defaultHeight: 15, label: 'Shoe Rack' },
-  [SectionType.LONG_SHELF]: { icon: Layers, defaultHeight: 10, label: 'Long Shelf' },
-  [SectionType.EMPTY]: { icon: Move, defaultHeight: 10, label: 'Empty Space' },
+  [SectionType.LONG_SHELF]: { icon: Layers, defaultHeight: 10, label: 'Upper Storage' },
+  [SectionType.EMPTY]: { icon: Move, defaultHeight: 10, label: 'Void / Gap' },
 };
 
 // Only show draggable ones
@@ -26,10 +27,10 @@ const ItemSidebar: React.FC = () => {
   };
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm sticky top-8">
-        <div className="mb-4">
-            <h3 className="font-bold text-slate-800">Wardrobe Items</h3>
-            <p className="text-xs text-slate-500 mt-1">Drag items to customize your design</p>
+    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm sticky top-8">
+        <div className="mb-6 pb-4 border-b border-stone-100">
+            <h3 className="font-bold text-stone-900 tracking-tight">Components</h3>
+            <p className="text-xs text-stone-400 mt-1 font-medium">Drag to insert into columns</p>
         </div>
         
         <div className="space-y-3">
@@ -41,19 +42,19 @@ const ItemSidebar: React.FC = () => {
                         key={type}
                         draggable
                         onDragStart={(e) => handleDragStart(e, type)}
-                        className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl cursor-grab active:cursor-grabbing transition-all group select-none"
+                        className="flex items-center gap-4 p-4 bg-stone-50 hover:bg-white border border-stone-200 hover:border-amber-400 rounded-lg cursor-grab active:cursor-grabbing transition-all group select-none shadow-sm hover:shadow-md"
                     >
-                        <div className="text-slate-500 group-hover:text-indigo-600 transition-colors">
-                            <Icon size={20} />
+                        <div className="text-stone-400 group-hover:text-amber-500 transition-colors bg-white p-2 rounded border border-stone-100">
+                            <Icon size={18} />
                         </div>
-                        <span className="font-medium text-slate-700 text-sm">{config.label}</span>
+                        <span className="font-bold text-stone-700 text-sm tracking-wide">{config.label}</span>
                     </div>
                 );
             })}
         </div>
         
-        <div className="mt-6 p-3 bg-slate-50 rounded-lg text-xs text-slate-500 border border-slate-100">
-            <p><strong>Tip:</strong> Drop an item onto any column in a design to add it. The layout will automatically adjust.</p>
+        <div className="mt-8 p-4 bg-stone-900 rounded-lg text-xs text-stone-300 leading-relaxed">
+            <p className="opacity-80"><strong>Designer Tip:</strong> Layouts auto-balance. Drop an item, and we'll calculate the remaining space.</p>
         </div>
     </div>
   );

@@ -7,7 +7,7 @@ import DesignCard from './components/DesignCard';
 import GeneratedImageModal from './components/GeneratedImageModal';
 import EditDesignModal from './components/EditDesignModal';
 import ItemSidebar, { ITEM_CONFIGS } from './components/ItemSidebar';
-import { Layout, Armchair } from 'lucide-react';
+import { Layout, Armchair, Sparkles, PenTool } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dimensions, setDimensions] = useState<Dimensions | null>(null);
@@ -373,60 +373,67 @@ const App: React.FC = () => {
   const getEditingDesign = () => designs.find(d => d.id === editingDesignId);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 pb-20">
+    <div className="min-h-screen bg-stone-50 text-stone-900 pb-20 font-sans">
       
-      {/* Hero Header */}
-      <header className="bg-slate-900 text-white pt-20 pb-32 px-6 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-500 via-slate-900 to-slate-900"></div>
-        <div className="max-w-7xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center justify-center p-3 bg-white/10 rounded-2xl backdrop-blur-md mb-6 ring-1 ring-white/20 shadow-2xl">
-            <Armchair size={32} className="text-indigo-300 mr-3" />
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">WardrobeAI</h1>
+      {/* Architectural Hero Header */}
+      <header className="bg-[#1C1917] text-white pt-24 pb-32 px-6 relative overflow-hidden border-b border-stone-800">
+        {/* Grid Overlay */}
+        <div className="absolute inset-0 opacity-[0.07] bg-[linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+        
+        <div className="max-w-7xl mx-auto relative z-10 flex flex-col items-center text-center">
+          <div className="inline-flex items-center justify-center px-4 py-2 bg-stone-800/50 rounded-full backdrop-blur-md mb-8 ring-1 ring-stone-700 shadow-2xl">
+            <PenTool size={18} className="text-amber-400 mr-2" />
+            <span className="text-sm font-medium tracking-widest uppercase text-stone-300">Custom Joinery Intelligence</span>
           </div>
-          <h2 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">
-            Design Your Perfect Space
-          </h2>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
-            Enter your measurements and let AI create the optimal interior organization for your wardrobe, complete with drawers, shelves, and hanging space.
+          
+          <h1 className="text-4xl md:text-7xl font-bold mb-6 tracking-tight text-white">
+            Wardrobe<span className="text-stone-500 font-light">AI</span>
+          </h1>
+          
+          <p className="text-stone-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-light">
+            Transform raw measurements into optimized joinery schematics. 
+            <span className="hidden md:inline"> Designed for architects, cabinet makers, and homeowners.</span>
           </p>
         </div>
       </header>
 
-      <main className="px-6">
+      <main className="px-6 -mt-20 relative z-20">
         {/* Input Section */}
         <WardrobeInput onGenerate={handleGenerateLayouts} isLoading={isGeneratingLayouts} />
 
         {/* Results Section */}
         {dimensions && (
-            <div className="max-w-[90rem] mx-auto mt-16 animate-in fade-in slide-in-from-bottom-10 duration-700">
+            <div className="max-w-[95rem] mx-auto mt-20 animate-in fade-in slide-in-from-bottom-10 duration-700">
                 
                 {isGeneratingLayouts ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                         {[1, 2, 3].map(i => (
-                            <div key={i} className="h-[500px] bg-white rounded-2xl animate-pulse shadow-lg border border-slate-100" />
+                            <div key={i} className="h-[600px] bg-white rounded-xl animate-pulse shadow-sm border border-stone-200" />
                         ))}
                     </div>
                 ) : designs.length > 0 ? (
-                    <div className="flex flex-col lg:flex-row gap-8 items-start">
+                    <div className="flex flex-col lg:flex-row gap-10 items-start">
                         {/* Sidebar for Items */}
-                        <div className="w-full lg:w-64 shrink-0 animate-in slide-in-from-left-4 duration-500 delay-100 hidden lg:block">
+                        <div className="w-full lg:w-72 shrink-0 sticky top-8 hidden lg:block">
                             <ItemSidebar />
                         </div>
 
                         {/* Main Content */}
                         <div className="flex-1 w-full">
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-end justify-between mb-8 pb-4 border-b border-stone-200">
                                 <div>
-                                    <h3 className="text-2xl font-bold text-slate-800">Generated Designs</h3>
-                                    <p className="text-slate-500">Found {designs.length} optimized layouts for {dimensions.width}x{dimensions.height}{dimensions.unit}</p>
+                                    <h3 className="text-3xl font-bold text-stone-900">Schematics</h3>
+                                    <p className="text-stone-500 mt-1 font-mono text-sm">
+                                        Specs: {dimensions.width}{dimensions.unit} W x {dimensions.height}{dimensions.unit} H
+                                    </p>
                                 </div>
-                                <div className="hidden md:flex items-center gap-2 text-sm text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">
-                                    <Layout size={16} />
-                                    <span>Schematic View</span>
+                                <div className="hidden md:flex items-center gap-2 text-xs font-medium text-stone-500 bg-stone-100 px-4 py-2 rounded-full">
+                                    <Layout size={14} />
+                                    <span>FRONT ELEVATION</span>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-10">
                                 {designs.map(design => (
                                     <DesignCard 
                                         key={design.id} 
