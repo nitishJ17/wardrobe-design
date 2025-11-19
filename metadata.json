@@ -1,0 +1,5 @@
+{
+  "name": "WardrobeAI Designer",
+  "description": "AI-powered wardrobe interior designer. Input your dimensions and generate optimized storage layouts with drawers, shelves, and hanging spaces.",
+  "requestFramePermissions": []
+}
